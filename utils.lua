@@ -302,6 +302,7 @@ function rollRandColor()
 end
 
 function handlePlayerMatchUpdate(uid, isWin, mode)
+    if uid == nil then return end
     if(tonumber(uid) < 0) then
         uid = GAME.clients[tonumber(uid)].botName
         handleBotMatchUpdate(uid, isWin, mode)
