@@ -604,11 +604,12 @@ function handleNetMessage(e)
         else 
             galcon_surrender(g2.uid)
         end
-        --GAME.clients[e.uid] = nil
-        keywords_removeKeyword(e.name)
-        keywords_removeKeyword(GAME.clients[e.uid].displayName)
-        keywords_refreshKeywords()
-        clients_leave(e, true)
+        --print("called from first net:leave")
+        local player = playerData.getUserData(botUidFix(e))
+        net_send("","message",player.displayName .. " left")
+        GAME.clients[e.uid] = nil
+        g2.net_send("","sound","sfx-leave");
+        clients_queue(e)
     end
     if e.type == 'net:message' and string.lower(e.value) == '/wardrobe' then
         wardrobe(e)
