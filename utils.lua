@@ -341,17 +341,8 @@ function rollRandColor()
     return "0x"..r..g..b
 end
 
-<<<<<<< HEAD
-function handlePlayerMatchUpdate(uid, isWin, mode)
-    if uid == nil then return end
-    if(tonumber(uid) < 0) then
-        uid = GAME.clients[tonumber(uid)].botName
-        handleBotMatchUpdate(uid, isWin, mode)
-    else
-=======
 function handlePlayerMatchUpdate(puid, isWin, mode)
     local player = playerData.getUserData(puid)
->>>>>>> c6264abdf03df76081635a6d6391f7d0f36b9492
         if(string.lower(mode) ~= 'float') then
             if(isWin) then
                 player.stats['total'].wins = player.stats['total'].wins + 1
