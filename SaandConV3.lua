@@ -648,10 +648,12 @@ function galcon_classic_init()
                 p = g2.new_user(client.displayName, client.color)
             end
                 
-            users[#users+1] = p
+            
             p.user_uid = client.uid
             p.fleet_image = client.ship
             p.planet_style = json.encode(GAME.galcon.global.planets[client.skin])
+            users[#users+1] = p
+            print("p: " .. dump(p))
             if GAME.galcon.gamemode == "Race" then
                 p.planet_crash = 2
             end
@@ -1434,7 +1436,8 @@ function getFloatCoins()
     return coins
 end
 
-function galcon_stop(res, timerWinner, time) 
+function galcon_stop(res, timerWinner, time)
+    print_apm_counter()
     if(not GAME.galcon.global.TEAMS_MODE) then
         if res == true then
             local winner = timerWinner or most_production()
@@ -1796,11 +1799,50 @@ function galcon_init()
         end
     end
 
+    function obj:init_apm_counter()
+        obj.apmCounter = {}
+        for _, player in pairs(GAME.galcon.users) do
+            obj.apmCounter[player.user_uid] = 0
+        end
+    end
+
+    function obj:update_apm_counter(event)
+        -- Event is not a gameplay action.
+        if event.type ~= "net:send" and event.type ~= "net:redirect" then return end
+        -- Filter multi-select actions.
+        if event.tick == obj.previousEvent.tick and event.uid == obj.previousEvent.uid then return end
+
+        for uid, count in pairs(obj.apmCounter) do
+            if uid == event.uid then
+                obj.apmCounter[uid] = count + 1
+            end
+        end
+    end
+
+    function print_apm_counter()
+        if not GAME.modules.galcon.apmCounter then return end
+
+        local msg = "APM: "
+        local ticks = GAME.modules.galcon.ticks or 0
+        for uid, count in pairs(GAME.modules.galcon.apmCounter) do
+            local name = (GAME.clients[uid] and GAME.clients[uid].displayName) or ("uid:"..tostring(uid))
+            local apm = 0
+            if ticks > 0 then
+                apm = math.floor((count / ticks) * 60)
+            end
+            msg = msg .. name .. " - " .. apm .. " "
+        end
+
+        net_send("", "message", msg)
+    end
+
     function obj:init()
         g2.state = "play"
         params_set("state","play")
         params_set("html",ingamePauseMenu())
         galcon_classic_init()
+        self.ticks = 0
+        self.previousEvent = nil
         self.time = 0
         self.wait = 1
         self.counter = 0
@@ -1815,10 +1857,12 @@ function galcon_init()
         self.statusTimer = ""
         self.spectatorStatus = ""
         self.timeLeft = 0
+        obj:init_apm_counter()
     end
         
     function obj:loop(t)
         galcon_classic_loop()
+        self.ticks = self.ticks + t
         self.time = self.time + t
         self.timeout = self.timeout + t
 
@@ -1878,6 +1922,8 @@ function galcon_init()
        
     end
     function obj:event(e)
+        e.tick = self.ticks
+        self.apmPerPlayer = obj:update_apm_counter(e)
         if e.type == 'net:message' and string.lower(e.value) == '/abort' then
             if isAdmin(e.name) then
                 galcon_stop(false)
@@ -1964,6 +2010,7 @@ function galcon_init()
                 end
             end
         end
+        self.previousEvent = e
     end
 end
 function count_productionPlayer(uid)
